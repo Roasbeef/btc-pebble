@@ -6,6 +6,9 @@
 
 
 static char default_exchange_name[] = "on Mt. Gox";
+static char default_conversion_rate[7] = "---.--";
+static char default_buy_rate[7] = "383.90";
+static char default_sell_rate[7] = "383.40";
 
 static Window *window;
 static TextLayer *exchange_name;
@@ -14,14 +17,42 @@ static Layer *bid_ask_top_border;
 static Layer *buy_sell;
 static Layer *btc_to_usd;
 
+static AppSync btc_sync;
+static uint8_t btc_sync_buffer[64];
+
 
 enum {
-    BTC_VALUE,
-    BTC_SELL,
-    BTC_BUY
+    BTC_VALUE = 0x00,
+    BTC_BUY = 0x01,
+    BTC_SELL = 0x02
 };
 
-void in_received_handler(DictionaryIterator *received, void *context) {
+static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "App Message Sync Error: %d", app_message_error);
+
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "Trying %i", btc_sync_buffer[0]);
+  //memset(&btc_sync_buffer[0], 0, sizeof(btc_sync_buffer));
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "Made room?: %i", btc_sync_buffer[0]);
+}
+
+static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tuple, const Tuple* old_tuple, void* context) {
+    switch (key) {
+        case BTC_VALUE:
+            strcpy(default_conversion_rate, new_tuple->value->cstring);
+            layer_mark_dirty(btc_to_usd);
+            APP_LOG(APP_LOG_LEVEL_DEBUG, "VALUE UPDATE: %s", new_tuple->value->cstring);
+            break;
+        case BTC_SELL:
+            strcpy(default_buy_rate, new_tuple->value->cstring);
+            layer_mark_dirty(buy_sell);
+            APP_LOG(APP_LOG_LEVEL_DEBUG, "SELL UPDATE: %s", new_tuple->value->cstring);
+            break;
+        case BTC_BUY:
+            strcpy(default_sell_rate, new_tuple->value->cstring);
+            layer_mark_dirty(buy_sell);
+            APP_LOG(APP_LOG_LEVEL_DEBUG, "BUY UPDATE: %s", new_tuple->value->cstring);
+            break;
+    }
 }
 
 void border_update_callback(Layer *layer, GContext *ctx) {
@@ -37,17 +68,15 @@ void btc_to_usd_update_proc(Layer *self, GContext *ctx) {
   graphics_fill_rect(ctx, self_bounds, 0, GCornerNone);
   graphics_context_set_text_color(ctx, GColorWhite);
 
-  graphics_draw_text(ctx, "$371.00", usd_font, self_bounds, 
+  graphics_draw_text(ctx, default_conversion_rate, usd_font, self_bounds, 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 }
 
 void buy_sell_update_proc(Layer *self, GContext *ctx) {
   GRect self_bounds = layer_get_bounds(self);
-  GRect label_bounds = GRect(self_bounds.origin.x, self_bounds.origin.y + 17,
-                            self_bounds.size.h, self_bounds.size.w);
-  GRect buy_bounds = GRect(self_bounds.origin.x + 50, self_bounds.origin.y,
+  GRect buy_bounds = GRect(self_bounds.origin.x + 80, self_bounds.origin.y,
                              self_bounds.size.h, self_bounds.size.w);
-  GRect sell_bounds = GRect(self_bounds.origin.x + 50, self_bounds.origin.y + 17,
+  GRect sell_bounds = GRect(self_bounds.origin.x + 80, self_bounds.origin.y + 17,
                              self_bounds.size.h, self_bounds.size.w);
   GFont price_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   GFont label_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
@@ -57,15 +86,17 @@ void buy_sell_update_proc(Layer *self, GContext *ctx) {
   graphics_context_set_text_color(ctx, GColorWhite);
 
   // Labels
-  graphics_draw_text(ctx, "BUY", label_font, self_bounds, 
+  graphics_draw_text(ctx, "BUY", label_font, 
+                     GRect(self_bounds.origin.x, self_bounds.origin.y, 25, 18),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-  graphics_draw_text(ctx, "SELL", label_font, label_bounds, 
+  graphics_draw_text(ctx, "SELL", label_font,
+                     GRect(self_bounds.origin.x, self_bounds.origin.y + 17, 27, 18),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
   // Prices
-  graphics_draw_text(ctx, "$370.00", price_font, buy_bounds, 
+  graphics_draw_text(ctx, default_buy_rate, price_font, buy_bounds, 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
-  graphics_draw_text(ctx, "$360.00", price_font, sell_bounds, 
+  graphics_draw_text(ctx, default_sell_rate, price_font, sell_bounds, 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 
@@ -104,32 +135,43 @@ static void window_load(Window *window) {
   btc_to_usd = layer_create(GRect(2, 2, 139, 41));
   layer_set_update_proc(btc_to_usd, &btc_to_usd_update_proc);
   layer_add_child(window_layer, btc_to_usd);
+
+  // Init dummy values for all the dynamic stuff.
+  Tuplet initial_values[] = {
+      TupletCString(BTC_VALUE, "000.00"),
+      TupletCString(BTC_SELL, "000.00"),
+      TupletCString(BTC_BUY, "000.00")
+  };
+
+  // Set up sync callback.
+  app_sync_init(&btc_sync, btc_sync_buffer, sizeof(btc_sync_buffer),
+                initial_values, ARRAY_LENGTH(initial_values),
+                sync_tuple_changed_callback, sync_error_callback, NULL);
 }
 
 static void window_unload(Window *window) {
+  app_sync_deinit(&btc_sync);
+
   text_layer_destroy(exchange_name);
+
   layer_destroy(exchange_top_border);
   layer_destroy(bid_ask_top_border);
   layer_destroy(buy_sell);
   layer_destroy(btc_to_usd);
 }
 
-static void app_message_init(void) {
-  // Init buffers
-  app_message_open(64, 64);
-  // Register message handlers
-  app_message_register_inbox_received(in_received_handler);
-}
-
 static void init(void) {
   window = window_create();
-  app_message_init();
 
   window_set_window_handlers(window, (WindowHandlers) {
     .load = window_load,
     .unload = window_unload,
   });
   window_set_background_color(window, GColorBlack);
+
+  const uint32_t inbound_size = 64;
+  const uint32_t outbound_size = 64;
+  app_message_open(inbound_size, outbound_size);
 
   const bool animated = true;
   window_stack_push(window, animated);
