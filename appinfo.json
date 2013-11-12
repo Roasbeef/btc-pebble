@@ -2,12 +2,13 @@
   "uuid": "5ec6d302-204b-441b-bd22-56cc86192861",
   "shortName": "btc-pebble",
   "longName": "btc-pebble",
-  "companyName": "MakeAwesomeHappen",
+  "companyName": "Olaoluwa Osuntokun",
   "versionCode": 1,
   "versionLabel": "1.0.0",
   "watchapp": {
-    "watchface": false
+    "watchface": true
   },
+  "capabilities": ["configurable"],
   "appKeys": {
     "dummy": 0
   },
