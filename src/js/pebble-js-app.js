@@ -32,7 +32,7 @@ function get_btc_info(exchange) {
 Pebble.addEventListener("ready", function(e) {
     console.log('REAADY!');
     var btc_exchange = mt_gox;
-    //setInterval(get_btc_info, 5000, btc_exchange);
+    setInterval(get_btc_info, 5000, btc_exchange);
     console.log('TIMEOUT OK!');
 });
 

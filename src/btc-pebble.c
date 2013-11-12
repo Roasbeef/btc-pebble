@@ -74,10 +74,6 @@ void btc_to_usd_update_proc(Layer *self, GContext *ctx) {
 
 void buy_sell_update_proc(Layer *self, GContext *ctx) {
   GRect self_bounds = layer_get_bounds(self);
-  GRect buy_bounds = GRect(self_bounds.origin.x + 80, self_bounds.origin.y,
-                             self_bounds.size.h, self_bounds.size.w);
-  GRect sell_bounds = GRect(self_bounds.origin.x + 80, self_bounds.origin.y + 17,
-                             self_bounds.size.h, self_bounds.size.w);
   GFont price_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   GFont label_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
 
@@ -94,9 +90,11 @@ void buy_sell_update_proc(Layer *self, GContext *ctx) {
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
   // Prices
-  graphics_draw_text(ctx, default_buy_rate, price_font, buy_bounds, 
+  graphics_draw_text(ctx, default_buy_rate, price_font, 
+                     GRect(self_bounds.origin.x + 90, self_bounds.origin.y - 4, 50, 42),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
-  graphics_draw_text(ctx, default_sell_rate, price_font, sell_bounds, 
+  graphics_draw_text(ctx, default_sell_rate, price_font,
+                     GRect(self_bounds.origin.x + 90, self_bounds.origin.y + 17, 50, 42),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 
