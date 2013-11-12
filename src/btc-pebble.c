@@ -15,6 +15,15 @@ static Layer *buy_sell;
 static Layer *btc_to_usd;
 
 
+enum {
+    BTC_VALUE,
+    BTC_SELL,
+    BTC_BUY
+};
+
+void in_received_handler(DictionaryIterator *received, void *context) {
+}
+
 void border_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorWhite);
   graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
@@ -28,7 +37,7 @@ void btc_to_usd_update_proc(Layer *self, GContext *ctx) {
   graphics_fill_rect(ctx, self_bounds, 0, GCornerNone);
   graphics_context_set_text_color(ctx, GColorWhite);
 
-  graphics_draw_text(ctx, "371", usd_font, self_bounds, 
+  graphics_draw_text(ctx, "$371.00", usd_font, self_bounds, 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 }
 
@@ -36,9 +45,9 @@ void buy_sell_update_proc(Layer *self, GContext *ctx) {
   GRect self_bounds = layer_get_bounds(self);
   GRect label_bounds = GRect(self_bounds.origin.x, self_bounds.origin.y + 17,
                             self_bounds.size.h, self_bounds.size.w);
-  GRect buy_bounds = GRect(self_bounds.origin.x + 90, self_bounds.origin.y,
+  GRect buy_bounds = GRect(self_bounds.origin.x + 50, self_bounds.origin.y,
                              self_bounds.size.h, self_bounds.size.w);
-  GRect sell_bounds = GRect(self_bounds.origin.x + 90, self_bounds.origin.y + 17,
+  GRect sell_bounds = GRect(self_bounds.origin.x + 50, self_bounds.origin.y + 17,
                              self_bounds.size.h, self_bounds.size.w);
   GFont price_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   GFont label_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
@@ -54,9 +63,9 @@ void buy_sell_update_proc(Layer *self, GContext *ctx) {
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
   // Prices
-  graphics_draw_text(ctx, "370", price_font, buy_bounds, 
+  graphics_draw_text(ctx, "$370.00", price_font, buy_bounds, 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
-  graphics_draw_text(ctx, "360", price_font, sell_bounds, 
+  graphics_draw_text(ctx, "$360.00", price_font, sell_bounds, 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 
@@ -102,19 +111,28 @@ static void window_unload(Window *window) {
   layer_destroy(exchange_top_border);
   layer_destroy(bid_ask_top_border);
   layer_destroy(buy_sell);
+  layer_destroy(btc_to_usd);
+}
+
+static void app_message_init(void) {
+  // Init buffers
+  app_message_open(64, 64);
+  // Register message handlers
+  app_message_register_inbox_received(in_received_handler);
 }
 
 static void init(void) {
   window = window_create();
+  app_message_init();
 
   window_set_window_handlers(window, (WindowHandlers) {
     .load = window_load,
     .unload = window_unload,
   });
+  window_set_background_color(window, GColorBlack);
 
   const bool animated = true;
   window_stack_push(window, animated);
-  window_set_background_color(window, GColorBlack);
 }
 
 static void deinit(void) {

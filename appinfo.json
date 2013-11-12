@@ -10,7 +10,9 @@
   },
   "capabilities": ["configurable"],
   "appKeys": {
-    "dummy": 0
+    "value": 0,
+    "buy": 1,
+    "sell": 2
   },
   "resources": {
     "media": []
