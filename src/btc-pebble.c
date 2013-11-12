@@ -68,8 +68,14 @@ void btc_to_usd_update_proc(Layer *self, GContext *ctx) {
   graphics_fill_rect(ctx, self_bounds, 0, GCornerNone);
   graphics_context_set_text_color(ctx, GColorWhite);
 
-  graphics_draw_text(ctx, default_conversion_rate, usd_font, self_bounds, 
+  graphics_draw_text(ctx, default_conversion_rate, usd_font, 
+                     GRect(self_bounds.origin.x, self_bounds.origin.y - 5,
+                           self_bounds.size.w, self_bounds.size.h),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  graphics_draw_text(ctx, "USD/BTC", fonts_get_system_font(FONT_KEY_GOTHIC_18), 
+                     GRect(self_bounds.origin.x + 20, self_bounds.origin.y + 20, 
+                           self_bounds.size.w, self_bounds.size.h),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
 void buy_sell_update_proc(Layer *self, GContext *ctx) {
