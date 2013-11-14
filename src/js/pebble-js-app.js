@@ -1,6 +1,21 @@
-var mt_gox = {'api_path' :'http://data.mtgox.com/api/2/BTCUSD/money/ticker_fast',
-              'parse_json': function(){ return; },
-             };
+var btc_exchanges = (function(){
+    var pebble_frame = {};
+    var self = this;
+    var trim_dollar = function(s) { return s.substr(1, s.length - 1); };
+    return {
+        'mt_gox': {
+            'api_path' :'http://data.mtgox.com/api/2/BTCUSD/money/ticker_fast',
+            'parse_json': function(resp) { 
+                pebble_frame.value = trim_dollar(resp.last.display);
+                pebble_frame.buy = trim_dollar(resp.buy.display);
+                pebble_frame.sell = trim_dollar(resp.sell.display);
+
+                return pebble_frame;
+            },
+        },
+    };
+})();
+
 
 function get_btc_info(exchange) {
     console.log('We here!');
@@ -12,15 +27,8 @@ function get_btc_info(exchange) {
             if(req.status == 200) {
                 var resp = JSON.parse(req.responseText).data;
                 console.log(JSON.stringify(resp));
-                var value = resp.last.display;
-                var buy = resp.buy.display;
-                var sell = resp.sell.display;
-                Pebble.sendAppMessage({
-                    // Trim off the dollar signs.
-                    'value': value.substr(1, value.length - 1),
-                    'buy': buy.substr(1, buy.length - 1),
-                    'sell': sell.substr(1, sell.length - 1)
-                });
+                console.log(Object.keys(Pebble));
+                Pebble.sendAppMessage(exchange.parse_json(resp));
             } else {
                 console.log('Error');
             }
@@ -31,8 +39,7 @@ function get_btc_info(exchange) {
 
 Pebble.addEventListener("ready", function(e) {
     console.log('REAADY!');
-    var btc_exchange = mt_gox;
-    setInterval(get_btc_info, 5000, btc_exchange);
+    setInterval(get_btc_info, 5000, btc_exchanges['mt_gox']);
     console.log('TIMEOUT OK!');
 });
 
