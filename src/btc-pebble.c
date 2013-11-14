@@ -7,8 +7,8 @@
 
 static char default_exchange_name[] = "on Mt. Gox";
 static char default_conversion_rate[7] = "---.--";
-static char default_buy_rate[7] = "383.90";
-static char default_sell_rate[7] = "383.40";
+static char default_buy_rate[7] = "---.--";
+static char default_sell_rate[7] = "---.--";
 
 static Window *window;
 static TextLayer *exchange_name;
