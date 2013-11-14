@@ -12,6 +12,7 @@ static char default_sell_rate[7] = "---.--";
 
 static Window *window;
 static TextLayer *exchange_name;
+static TextLayer *text_time_layer;
 static Layer *exchange_top_border;
 static Layer *bid_ask_top_border;
 static Layer *buy_sell;
@@ -104,9 +105,40 @@ void buy_sell_update_proc(Layer *self, GContext *ctx) {
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 
+void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
+  static char time_text[] = "00:00";
+
+  char *time_format;
+
+  if (clock_is_24h_style()) {
+    time_format = "%R";
+  } else {
+    time_format = "%I:%M";
+  }
+
+  strftime(time_text, sizeof(time_text), time_format, tick_time);
+
+  if (!clock_is_24h_style() && (time_text[0] == '0')) {
+    memmove(time_text, &time_text[1], sizeof(time_text) - 1);
+  }
+
+  text_layer_set_text(text_time_layer, time_text);
+}
+
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
+
+  // Le time
+  text_time_layer = text_layer_create((GRect) { .origin = { EXCHANGE_NAME_X_ORIGIN - 5, EXCHANGE_NAME_Y_ORIGIN}, 
+                                              .size = { bounds.size.w, EXCHANGE_NAME_Y_SIZE} });
+
+  text_layer_set_text_color(text_time_layer, GColorWhite);
+  text_layer_set_font(text_time_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  text_layer_set_text(text_time_layer, "00:00");
+  text_layer_set_background_color(text_time_layer, GColorClear);
+  text_layer_set_text_alignment(text_time_layer, GTextAlignmentRight);
+  layer_add_child(window_layer, text_layer_get_layer(text_time_layer));
 
   // Which exchange?
   exchange_name = text_layer_create((GRect) { .origin = { EXCHANGE_NAME_X_ORIGIN, EXCHANGE_NAME_Y_ORIGIN}, 
@@ -140,6 +172,7 @@ static void window_load(Window *window) {
   layer_set_update_proc(btc_to_usd, &btc_to_usd_update_proc);
   layer_add_child(window_layer, btc_to_usd);
 
+
   // Init dummy values for all the dynamic stuff.
   Tuplet initial_values[] = {
       TupletCString(BTC_VALUE, "000.00"),
@@ -157,6 +190,7 @@ static void window_unload(Window *window) {
   app_sync_deinit(&btc_sync);
 
   text_layer_destroy(exchange_name);
+  text_layer_destroy(text_time_layer);
 
   layer_destroy(exchange_top_border);
   layer_destroy(bid_ask_top_border);
@@ -179,6 +213,8 @@ static void init(void) {
 
   const bool animated = true;
   window_stack_push(window, animated);
+
+  tick_timer_service_subscribe(MINUTE_UNIT, handle_minute_tick);
 }
 
 static void deinit(void) {
