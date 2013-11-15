@@ -44,12 +44,5 @@ Pebble.addEventListener("ready", function(e) {
 
 Pebble.addEventListener("appmessage", function(e) {
     console.log('GOT MESSAGE FORM APP');
-    // Grab config values previously saved on watch storage.
-    //  * exchange
-    //  * poll interval in ms
-    //  * high alert threshold (default to ATH)
-    //  * low alert threshold 
-    //  * keep track of ATH
-    //  What do do about graph?
     console.log(e.type);
 });
