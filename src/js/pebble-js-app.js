@@ -1,8 +1,11 @@
 var btc_exchanges = (function(){
-    var trim_dollar = function(s) { return s.substr(1, s.length - 1); };
-    var json_parser = function(last, buy, sell) {
+    // 'exchange_func' is an exchange specific parsing function.
+    // Ex: converting Chinese Yuan to US Dollar or handling exchange specific
+    // json parsing
+    var json_parser = function(last, buy, sell, exchange_func) {
         return function(resp) {
             var pebble_frame = {};
+            exchange_func = exchange_func || function(s) {return s;};
             function getattr(obj, attrs) {
                 var attrs = attrs.split(".");
                 for(var i=0;i<attrs.length;i++) {
@@ -10,36 +13,35 @@ var btc_exchanges = (function(){
                 };
                 return obj;
             };
-            pebble_frame.value = trim_dollar(getattr(resp, last));
-            pebble_frame.buy = trim_dollar(getattr(resp, buy));
-            pebble_frame.sell = trim_dollar(getattr(resp, sell));
+            pebble_frame.value = exchange_func(getattr(resp, last));
+            pebble_frame.buy = exchange_func(getattr(resp, buy));
+            pebble_frame.sell = exchange_func(getattr(resp, sell));
 
             return pebble_frame;
         };
     };
+    console.log('returning');
     return {
         'mt_gox': {
             'api_path' :'http://data.mtgox.com/api/2/BTCUSD/money/ticker_fast',
-            'parse_json': json_parser('last.display', 'buy.display', 
-                                      'sell.display'),
+            'parse_json': json_parser('data.last.display', 'data.buy.display', 
+                                      'data.sell.display', function(s) {
+                                          // Trim off the "$" sign.
+                                          return s.substr(1, s.length - 1);
+                                      }),
         },
         'bitstamp': {
-            'api_path' :'https://www.bitstamp.net/api/ticker/',
-            'parse_json': function(resp) { 
-                pebble_frame.value = trim_dollar(resp.last);
-                pebble_frame.buy = trim_dollar(resp.bid);
-                pebble_frame.sell = trim_dollar(resp.ask);
-
-                return pebble_frame;
-            },
+            'api_path' :'http://www.bitstamp.net/api/ticker/',
+            'parse_json': json_parser('last', 'bid', 'ask'),
         },
         'btc-e': {
-            'api_path' :'',
-            'parse_json': ''
-        },
-        'btcchina': {
-            'api_path' :'',
-            'parse_json': ''
+            'api_path': 'https://btc-e.com/api/2/btc_usd/ticker',
+            'parse_json': json_parser('ticker.last', 'ticker.buy', 'ticker.sell',
+                                      function(i) { 
+                                          // Trim off extra decimal place.
+                                          var str_dollar = String(i);
+                                          return str_dollar.substr(0, str_dollar.length - 1);
+                                      }),
         },
     };
 })();
@@ -53,9 +55,8 @@ function get_btc_info(exchange) {
     req.onload = function(e) {
         if (req.readyState == 4 && req.status == 200) {
             if(req.status == 200) {
-                var resp = JSON.parse(req.responseText).data;
+                var resp = JSON.parse(req.responseText);
                 console.log(JSON.stringify(resp));
-                console.log(Object.keys(Pebble));
                 Pebble.sendAppMessage(exchange.parse_json(resp));
             } else {
                 console.log('Error');
