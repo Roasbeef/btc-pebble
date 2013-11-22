@@ -5,7 +5,7 @@
 #define EXCHANGE_NAME_Y_SIZE 30
 
 
-static char default_exchange_name[] = "on Mt. Gox";
+static char default_exchange_name[] = "on Mt.Gox";
 static char default_conversion_rate[7] = "---.--";
 static char default_buy_rate[7] = "---.--";
 static char default_sell_rate[7] = "---.--";
