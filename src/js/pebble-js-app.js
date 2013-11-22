@@ -72,7 +72,7 @@ Pebble.addEventListener("webviewclosed", function(e) {
 
 Pebble.addEventListener("showConfiguration", function(e) {
     console.log('Opening Config Page');
-    Pebble.openURL('http://www.google.com/');
+    Pebble.openURL('http://btc-pebble.appspot.com/');
 });
 
 Pebble.addEventListener("ready", function(e) {
